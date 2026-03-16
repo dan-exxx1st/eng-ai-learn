@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: devlingo-backend
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:devlingo}
+    username: ${DB_USER:devlingo}
+    password: ${DB_PASSWORD:devlingo_secret}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  ai:
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      init:
+        timeout: 300s
+        pull-model-strategy: never
+      chat:
+        options:
+          model: ${OLLAMA_MODEL:llama3.1}
+          num-ctx: 4096
+          temperature: 0.7
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:default-secret-key-change-in-production-must-be-at-least-256-bits}
+    access-expiration: ${JWT_ACCESS_EXPIRATION:900000}
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+  upload:
+    dir: ${UPLOAD_DIR:./uploads}
+    allowed-types: application/pdf,text/plain
+    max-size: 10485760
+
+server:
+  port: 8080
+  servlet:
+    async:
+      timeout: 300000
+
+spring.mvc.async.request-timeout: 300000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

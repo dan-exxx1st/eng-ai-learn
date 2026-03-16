@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:16-alpine:///devlingo_test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  flyway:
+    enabled: true
+
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: llama3.1
+
+app:
+  jwt:
+    secret: test-secret-key-for-tests-must-be-at-least-256-bits-long-enough
+    access-expiration: 900000
+    refresh-expiration: 604800000
+
+  upload:
+    dir: ./test-uploads
+    allowed-types: application/pdf,text/plain
+    max-size: 10485760
