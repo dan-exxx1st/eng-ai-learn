@@ -91,9 +91,8 @@ public class LessonService {
                     Map<String, Object> ex = exercisesData.get(i);
                     Exercise exercise = Exercise.builder()
                             .lesson(lesson)
-                            .exerciseType(ExerciseType.valueOf((String) ex.get("exerciseType")))
-                            .difficulty(ex.containsKey("difficulty") ?
-                                    Difficulty.valueOf((String) ex.get("difficulty")) : Difficulty.MEDIUM)
+                            .exerciseType(safeEnum(ExerciseType.class, (String) ex.get("exerciseType"), ExerciseType.FILL_IN_BLANK))
+                            .difficulty(safeEnum(Difficulty.class, (String) ex.get("difficulty"), Difficulty.MEDIUM))
                             .question((String) ex.get("question"))
                             .options(ex.containsKey("options") ?
                                     objectMapper.writeValueAsString(ex.get("options")) : null)
@@ -109,6 +108,16 @@ public class LessonService {
         } catch (Exception e) {
             log.error("Failed to generate lesson content", e);
             throw new RuntimeException("Failed to generate lesson content", e);
+        }
+    }
+
+    private <T extends Enum<T>> T safeEnum(Class<T> enumClass, String value, T defaultValue) {
+        if (value == null || value.isBlank()) return defaultValue;
+        try {
+            return Enum.valueOf(enumClass, value.toUpperCase().replace(" ", "_"));
+        } catch (IllegalArgumentException e) {
+            log.warn("Unknown {} value '{}', using default {}", enumClass.getSimpleName(), value, defaultValue);
+            return defaultValue;
         }
     }
 }

@@ -96,6 +96,7 @@ public class ProgramService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<ProgramResponse> getUserPrograms(UUID userId) {
         return programRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
@@ -103,6 +104,7 @@ public class ProgramService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public ProgramResponse getProgram(UUID programId, UUID userId) {
         LearningProgram program = programRepository.findByIdAndUserId(programId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Program not found"));

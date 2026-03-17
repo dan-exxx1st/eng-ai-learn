@@ -29,7 +29,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
             @let opts = parseOptions(ex.options);
             <mat-radio-group [(ngModel)]="selectedAnswer" class="options">
               @for (opt of opts; track opt) {
-                <mat-radio-button [value]="opt.charAt(0)">{{ opt }}</mat-radio-button>
+                <mat-radio-button [value]="opt">{{ opt }}</mat-radio-button>
               }
             </mat-radio-group>
           } @else {

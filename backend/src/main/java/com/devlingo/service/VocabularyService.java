@@ -156,16 +156,26 @@ public class VocabularyService {
     private String autoTranslate(String word, String context) {
         try {
             String contextHint = (context != null && !context.isBlank())
-                    ? " Context: \"" + context + "\"." : "";
-            String prompt = "Translate the following English word/phrase to Russian. " +
-                    "Return ONLY the translation, nothing else." + contextHint +
-                    " Word: \"" + word + "\"";
+                    ? "\nContext sentence: \"" + context + "\"" : "";
+            String prompt = "You are an English-Russian dictionary. " +
+                    "Translate the English word to Russian. " +
+                    "Reply with ONLY the Russian translation word(s), nothing else. " +
+                    "No explanations, no transliteration, no quotes, no punctuation.\n\n" +
+                    "English: hello\nRussian: привет\n\n" +
+                    "English: simultaneously\nRussian: одновременно\n\n" +
+                    "English: " + word + contextHint + "\nRussian:";
             String result = chatClientBuilder.build()
                     .prompt()
                     .user(prompt)
                     .call()
                     .content();
-            return result != null ? result.trim().replaceAll("^\"|\"$", "") : null;
+            if (result == null) return null;
+            // Clean up: take only first line, remove quotes/punctuation
+            String cleaned = result.trim().split("\n")[0]
+                    .replaceAll("^\"|\"$", "")
+                    .replaceAll("^\\*+|\\*+$", "")
+                    .trim();
+            return cleaned.isEmpty() ? null : cleaned;
         } catch (Exception e) {
             log.warn("Failed to auto-translate '{}': {}", word, e.getMessage());
             return null;
