@@ -28,6 +28,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent)
       },
       {
+        path: 'profile',
+        loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent)
+      },
+      {
         path: 'placement-test',
         loadComponent: () => import('./features/placement-test/test-page/test-page.component').then(m => m.TestPageComponent)
       },
@@ -50,6 +54,22 @@ export const routes: Routes = [
       {
         path: 'lessons/:lessonId/exercises',
         loadComponent: () => import('./features/programs/exercise/exercise.component').then(m => m.ExerciseComponent)
+      },
+      {
+        path: 'vocabulary',
+        loadComponent: () => import('./features/vocabulary/vocabulary.component').then(m => m.VocabularyComponent)
+      },
+      {
+        path: 'vocabulary/review',
+        loadComponent: () => import('./features/vocabulary/vocabulary-review.component').then(m => m.VocabularyReviewComponent)
+      },
+      {
+        path: 'practice',
+        loadComponent: () => import('./features/practice/practice.component').then(m => m.PracticeComponent)
+      },
+      {
+        path: 'practice/:sessionId',
+        loadComponent: () => import('./features/practice/practice-chat.component').then(m => m.PracticeChatComponent)
       },
       {
         path: 'admin/users',

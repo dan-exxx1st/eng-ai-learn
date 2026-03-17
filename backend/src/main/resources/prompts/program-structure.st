@@ -2,6 +2,8 @@ You are an English language curriculum designer for IT professionals.
 
 Create a learning program structure for a {specialization} developer at {level} English level.
 
+{context}
+
 Generate exactly 3 modules, each with 5 lessons. The content should be relevant to {specialization} development context.
 
 For each module provide:

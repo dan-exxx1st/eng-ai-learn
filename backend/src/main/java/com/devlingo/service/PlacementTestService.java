@@ -1,6 +1,5 @@
 package com.devlingo.service;
 
-import com.devlingo.ai.PlacementTestAiService;
 import com.devlingo.domain.entity.PlacementTestResult;
 import com.devlingo.domain.entity.User;
 import com.devlingo.domain.enums.LanguageLevel;
@@ -28,7 +27,7 @@ public class PlacementTestService {
     private static final int QUESTIONS_PER_LEVEL = 4;
     private static final int TOTAL_QUESTIONS = LEVELS.length * QUESTIONS_PER_LEVEL;
 
-    private final PlacementTestAiService aiService;
+    private final QuestionGeneratorService generatorService;
     private final PlacementTestResultRepository testResultRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
@@ -45,7 +44,15 @@ public class PlacementTestService {
                 .build();
 
         test = testResultRepository.save(test);
-        return new TestResultResponse(test.getId(), null, 0, TOTAL_QUESTIONS, false);
+        UUID testId = test.getId();
+
+        // Kick off generation of all batches in background via separate bean (@Async works)
+        generatorService.initCache(testId);
+        for (int i = 0; i < LEVELS.length; i++) {
+            generatorService.generateBatchAsync(testId, i);
+        }
+
+        return new TestResultResponse(testId, null, 0, TOTAL_QUESTIONS, false, null);
     }
 
     @Transactional
@@ -59,16 +66,16 @@ public class PlacementTestService {
 
         List<Map<String, Object>> questions = parseQuestions(test.getQuestions());
 
-        // Generate batch if we don't have this question yet
+        int batchIndex = index / QUESTIONS_PER_LEVEL;
         if (index >= questions.size()) {
-            int batchIndex = index / QUESTIONS_PER_LEVEL;
-            String level = LEVELS[batchIndex];
-            log.info("Generating questions for level {} (batch {})", level, batchIndex);
+            // Wait for batches to be ready and append
+            for (int b = questions.size() / QUESTIONS_PER_LEVEL; b <= batchIndex; b++) {
+                List<Map<String, Object>> batch = generatorService.waitForBatch(testId, b);
+                if (batch != null) {
+                    questions.addAll(batch);
+                }
+            }
 
-            String batchJson = aiService.generateQuestionsForLevel(level);
-            List<Map<String, Object>> batch = parseQuestions(batchJson);
-
-            questions.addAll(batch);
             try {
                 test.setQuestions(objectMapper.writeValueAsString(questions));
             } catch (JsonProcessingException e) {
@@ -130,7 +137,7 @@ public class PlacementTestService {
             List<Map<String, String>> answers = parseAnswers(test.getAnswers());
 
             if (answers.size() < TOTAL_QUESTIONS) {
-                return new TestResultResponse(test.getId(), null, answers.size(), TOTAL_QUESTIONS, false);
+                return new TestResultResponse(test.getId(), null, answers.size(), TOTAL_QUESTIONS, false, null);
             }
 
             int score = (int) answers.stream().filter(a -> "true".equals(a.get("correct"))).count();
@@ -147,12 +154,43 @@ public class PlacementTestService {
             userRepository.save(user);
         }
 
+        // Cleanup cache
+        generatorService.cleanupCache(testId);
+
+        // Build detailed results
+        List<Map<String, Object>> questions = parseQuestions(test.getQuestions());
+        List<Map<String, String>> allAnswers = parseAnswers(test.getAnswers());
+        List<TestResultResponse.QuestionResult> details = new ArrayList<>();
+
+        for (int i = 0; i < questions.size(); i++) {
+            Map<String, Object> q = questions.get(i);
+            String userAnswer = null;
+            boolean correct = false;
+            for (Map<String, String> a : allAnswers) {
+                if (String.valueOf(i).equals(a.get("questionIndex"))) {
+                    userAnswer = a.get("answer");
+                    correct = "true".equals(a.get("correct"));
+                    break;
+                }
+            }
+            details.add(new TestResultResponse.QuestionResult(
+                    i,
+                    (String) q.get("question"),
+                    (String) q.get("difficulty"),
+                    userAnswer,
+                    (String) q.get("correctAnswer"),
+                    correct,
+                    (String) q.get("explanation")
+            ));
+        }
+
         return new TestResultResponse(
                 test.getId(),
                 test.getDeterminedLevel().name(),
                 test.getScore(),
                 TOTAL_QUESTIONS,
-                true
+                true,
+                details
         );
     }
 
@@ -167,7 +205,7 @@ public class PlacementTestService {
 
     private List<Map<String, Object>> parseQuestions(String json) {
         try {
-            return objectMapper.readValue(json, new TypeReference<>() {});
+            return new ArrayList<>(objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {}));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to parse questions", e);
         }
@@ -175,7 +213,7 @@ public class PlacementTestService {
 
     private List<Map<String, String>> parseAnswers(String json) {
         try {
-            return objectMapper.readValue(json, new TypeReference<>() {});
+            return new ArrayList<>(objectMapper.readValue(json, new TypeReference<List<Map<String, String>>>() {}));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Failed to parse answers", e);
         }

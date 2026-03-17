@@ -17,6 +17,11 @@ import { MatChipsModule } from '@angular/material/chips';
         @if (generating()) { Generating... } @else { Generate New Program }
       </button>
     </div>
+    @if (error()) {
+      <mat-card class="error-card">
+        <mat-card-content>{{ error() }}</mat-card-content>
+      </mat-card>
+    }
 
     @if (loading()) {
       <div class="center"><mat-spinner /></div>
@@ -49,6 +54,7 @@ import { MatChipsModule } from '@angular/material/chips';
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
     .programs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 16px; }
     .center { display: flex; justify-content: center; padding: 48px; }
+    .error-card { margin-bottom: 16px; background: #fdecea; color: #b71c1c; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -56,6 +62,7 @@ export class ProgramListComponent implements OnInit {
   programs = signal<any[]>([]);
   loading = signal(true);
   generating = signal(false);
+  error = signal('');
 
   constructor(private http: HttpClient) {}
 
@@ -72,12 +79,16 @@ export class ProgramListComponent implements OnInit {
 
   generateProgram() {
     this.generating.set(true);
+    this.error.set('');
     this.http.post<any>('/api/programs/generate', {}).subscribe({
       next: (program) => {
         this.programs.update(p => [program, ...p]);
         this.generating.set(false);
       },
-      error: () => this.generating.set(false)
+      error: (err) => {
+        this.generating.set(false);
+        this.error.set(err.error?.detail || 'Failed to generate program');
+      }
     });
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { tap } from 'rxjs';
+import { tap, catchError, EMPTY } from 'rxjs';
 
 export interface AuthResponse {
   userId: string;
@@ -66,6 +66,13 @@ export class AuthService {
 
   getToken(): string | null {
     return localStorage.getItem(this.tokenKey);
+  }
+
+  validateSession() {
+    if (!this.getToken()) return;
+    this.http.get('/api/profile').pipe(
+      catchError(() => { this.logout(); return EMPTY; })
+    ).subscribe();
   }
 
   private handleAuth(response: AuthResponse) {

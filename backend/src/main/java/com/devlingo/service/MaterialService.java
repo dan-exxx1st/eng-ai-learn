@@ -3,6 +3,7 @@ package com.devlingo.service;
 import com.devlingo.domain.entity.UploadedMaterial;
 import com.devlingo.domain.entity.User;
 import com.devlingo.domain.enums.MaterialStatus;
+import com.devlingo.ai.RagService;
 import com.devlingo.file.FileStorageService;
 import com.devlingo.file.TextExtractor;
 import com.devlingo.repository.UploadedMaterialRepository;
@@ -31,6 +32,7 @@ public class MaterialService {
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final List<TextExtractor> textExtractors;
+    private final RagService ragService;
 
     @Value("${app.upload.allowed-types}")
     private String allowedTypes;
@@ -62,12 +64,23 @@ public class MaterialService {
             String extractedText = extractText(file);
             material.setExtractedText(extractedText);
             material.setStatus(MaterialStatus.PROCESSED);
+            material = materialRepository.save(material);
+
+            // Index material for RAG
+            try {
+                ragService.indexMaterial(material.getId());
+                material.setStatus(MaterialStatus.INDEXED);
+                material = materialRepository.save(material);
+            } catch (Exception e) {
+                log.error("Failed to index material {} for RAG, keeping PROCESSED status",
+                        material.getId(), e);
+            }
         } catch (Exception e) {
             log.error("Failed to extract text from {}", file.getOriginalFilename(), e);
             material.setStatus(MaterialStatus.FAILED);
+            material = materialRepository.save(material);
         }
 
-        material = materialRepository.save(material);
         return toResponse(material);
     }
 

@@ -3,6 +3,8 @@ You are an English language teacher for IT professionals.
 Generate a detailed {lessonType} lesson for a {specialization} developer at {level} English level.
 Lesson topic: {title}
 
+{context}
+
 The lesson should include:
 1. Introduction/explanation of the topic
 2. Key vocabulary or grammar points (with examples from IT context)

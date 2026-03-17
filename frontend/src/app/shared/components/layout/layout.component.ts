@@ -6,13 +6,15 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { AuthService } from '../../../core/services/auth.service';
+import { TranslateSelectionDirective } from '../../directives/translate-selection.directive';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
   imports: [
     RouterOutlet, RouterLink, RouterLinkActive,
-    MatSidenavModule, MatToolbarModule, MatListModule, MatIconModule, MatButtonModule
+    MatSidenavModule, MatToolbarModule, MatListModule, MatIconModule, MatButtonModule,
+    TranslateSelectionDirective
   ],
   template: `
     <mat-sidenav-container class="layout-container">
@@ -30,6 +32,18 @@ import { AuthService } from '../../../core/services/auth.service';
           <a mat-list-item routerLink="/placement-test" routerLinkActive="active">
             <mat-icon matListItemIcon>quiz</mat-icon>
             <span matListItemTitle>Placement Test</span>
+          </a>
+          <a mat-list-item routerLink="/vocabulary" routerLinkActive="active">
+            <mat-icon matListItemIcon>translate</mat-icon>
+            <span matListItemTitle>Vocabulary</span>
+          </a>
+          <a mat-list-item routerLink="/practice" routerLinkActive="active">
+            <mat-icon matListItemIcon>chat</mat-icon>
+            <span matListItemTitle>Practice</span>
+          </a>
+          <a mat-list-item routerLink="/profile" routerLinkActive="active">
+            <mat-icon matListItemIcon>person</mat-icon>
+            <span matListItemTitle>Profile</span>
           </a>
           @if (authService.isAdmin()) {
             <a mat-list-item routerLink="/admin/users" routerLinkActive="active">
@@ -52,7 +66,7 @@ import { AuthService } from '../../../core/services/auth.service';
             <mat-icon>logout</mat-icon>
           </button>
         </mat-toolbar>
-        <div class="content">
+        <div class="content" appTranslateSelection>
           <router-outlet />
         </div>
       </mat-sidenav-content>

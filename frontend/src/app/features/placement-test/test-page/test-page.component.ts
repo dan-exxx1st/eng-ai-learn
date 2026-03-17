@@ -1,12 +1,16 @@
 import { Component, signal, ChangeDetectionStrategy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatRadioModule } from '@angular/material/radio';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
+import { MatChipsModule } from '@angular/material/chips';
 
 interface Question {
   index: number;
@@ -18,7 +22,11 @@ interface Question {
 @Component({
   selector: 'app-test-page',
   standalone: true,
-  imports: [MatCardModule, MatButtonModule, MatRadioModule, MatProgressSpinnerModule, MatProgressBarModule, FormsModule],
+  imports: [
+    FormsModule, MatCardModule, MatButtonModule, MatRadioModule,
+    MatProgressSpinnerModule, MatProgressBarModule, MatFormFieldModule,
+    MatInputModule, MatIconModule, MatChipsModule
+  ],
   template: `
     @if (!testId()) {
       <mat-card>
@@ -37,7 +45,7 @@ interface Question {
       <mat-card>
         <mat-card-content class="center">
           <mat-spinner diameter="40" />
-          <p>Generating {{ generatingLevel() }} level questions...</p>
+          <p>{{ currentQuestionIndex() === 0 ? 'Preparing test...' : 'Loading ' + generatingLevel() + ' level questions...' }}</p>
         </mat-card-content>
       </mat-card>
     } @else if (currentQuestion()) {
@@ -67,6 +75,29 @@ interface Question {
           </mat-card-content>
         }
       </mat-card>
+
+      <!-- Save unknown word -->
+      <mat-card class="vocab-card">
+        <mat-card-content>
+          <div class="vocab-input">
+            <mat-form-field appearance="outline" class="word-field">
+              <mat-label>Unknown word</mat-label>
+              <input matInput [(ngModel)]="newWord" placeholder="Type a word you don't know"
+                     (keyup.enter)="saveWord()">
+            </mat-form-field>
+            <button mat-raised-button color="accent" (click)="saveWord()" [disabled]="!newWord.trim()">
+              <mat-icon>bookmark_add</mat-icon> Save
+            </button>
+          </div>
+          @if (savedWords().length > 0) {
+            <div class="saved-words">
+              @for (w of savedWords(); track w) {
+                <mat-chip>{{ w }}</mat-chip>
+              }
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
     }
   `,
   styles: [`
@@ -76,6 +107,10 @@ interface Question {
     .correct { color: green; font-weight: bold; }
     .incorrect { color: red; }
     mat-progress-bar { margin-bottom: 16px; }
+    .vocab-card { margin-top: 16px; }
+    .vocab-input { display: flex; align-items: center; gap: 12px; }
+    .word-field { flex: 1; }
+    .saved-words { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -91,7 +126,9 @@ export class TestPageComponent {
   feedback = signal('');
   feedbackCorrect = signal(false);
   generatingLevel = signal('');
+  savedWords = signal<string[]>([]);
   selectedAnswer = '';
+  newWord = '';
 
   constructor(private http: HttpClient, private router: Router) {}
 
@@ -143,6 +180,23 @@ export class TestPageComponent {
         }, 1500);
       },
       error: () => this.submitting.set(false)
+    });
+  }
+
+  saveWord() {
+    const word = this.newWord.trim();
+    if (!word) return;
+
+    const question = this.currentQuestion();
+    this.http.post<any>('/api/vocabulary', {
+      word,
+      context: question?.question || '',
+      source: 'placement_test'
+    }).subscribe({
+      next: () => {
+        this.savedWords.update(words => [...words, word]);
+        this.newWord = '';
+      }
     });
   }
 }
